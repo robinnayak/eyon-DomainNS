@@ -27,12 +27,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework', # Added the rest_framework app
     'service', # Added the service app 
+    'corsheaders', # Added the corsheaders app
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -61,6 +64,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'domainserviceprovider.wsgi.application'
 
 
+
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
@@ -70,6 +74,13 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+
+CORS_ALLOWED_ORIGINS = [
+    "https://example.com",
+    "https://sub.example.com",
+    "http://localhost:3000",
+]
 
 
 # Password validation
@@ -120,4 +131,6 @@ GODADDY_API_KEY = config('GODADDY_API_KEY')
 GODADDY_API_SECRET_KEY = config('GODADDY_API_SECRET_KEY')
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
 
+DOMAIN = 'http://localhost:8000'
+WEBHOOK_ENDPOINT_SECRET = config('WEBHOOK_ENDPOINT_SECRET')
 
