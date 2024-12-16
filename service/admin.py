@@ -1,12 +1,35 @@
 from django.contrib import admin
-from .models import DomainPurchaseDetails
+from .models import CheckoutSession, Purchase
 
-# Register your models here.
 
-class DomainPurchaseDetailsAdmin(admin.ModelAdmin):
-    
-    list_display = ['domain_name','user_email','purchase_date','expiry_date','price']
-    search_fields = ['domain_name','user_email']
-    
+@admin.register(CheckoutSession)
+class CheckoutSessionAdmin(admin.ModelAdmin):
+    list_display = ['session_id', 'domain_name', 'period', 'price', 'currency', 'created_at']
+    search_fields = ['session_id', 'domain_name']
+    list_filter = ['currency', 'created_at']
+    readonly_fields = ['created_at']
 
-admin.site.register(DomainPurchaseDetails,DomainPurchaseDetailsAdmin)
+
+@admin.register(Purchase)
+class PurchaseAdmin(admin.ModelAdmin):
+    list_display = [
+        'order_id',
+        'checkout_session',
+        'get_email',  # Custom method to display email
+        'first_name',
+        'last_name',
+        'amount',
+        'currency',
+        'status',
+        'created_at'
+    ]
+    search_fields = ['order_id', 'checkout_session__domain_name', 'first_name', 'last_name']
+    list_filter = ['status', 'currency', 'created_at']
+    readonly_fields = ['created_at']
+    raw_id_fields = ['checkout_session']
+
+    def get_email(self, obj):
+        """Retrieve the email from the related CheckoutSession."""
+        return obj.checkout_session.email
+
+    get_email.short_description = 'Email'  # Column name in the admin interface

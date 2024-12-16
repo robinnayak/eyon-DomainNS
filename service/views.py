@@ -11,6 +11,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from decimal import Decimal
 from django.shortcuts import redirect
+from .models import CheckoutSession, Purchase
+import csv
 
 # Create your views here.
 
@@ -101,7 +103,6 @@ def domain_agreement(tlds, privacy="false"):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-
 @csrf_exempt
 def stripe_webhook(request):
     if request.method == "POST":
@@ -169,6 +170,14 @@ def purchase_domain(request):
             if not data.get(field):
                 return JsonResponse({"error": f"{field} is required"}, status=400)
 
+        checkout_session = CheckoutSession.objects.filter(
+            domain_name=data["domain_name"], email=data["email"]
+        )
+        if not checkout_session.exists():
+            return JsonResponse({"error": "Invalid checkout session"}, status=400)
+        print("= ================================")
+        print("checkout session from purchase",checkout_session)
+        checkout_session = checkout_session.first()
         domain_name = data["domain_name"]
         email = data["email"]
         period = int(data["period"])
@@ -186,7 +195,7 @@ def purchase_domain(request):
 
         if amount <= 0:
             return JsonResponse({"error": "Amount must be greater than 0"}, status=400)
-        
+
         # Extract TLD and fetch agreement keys
         tlds = [domain_name.split(".")[-1]]  # Extract TLD from domain name
         agreements = domain_agreement(tlds)
@@ -233,7 +242,7 @@ def purchase_domain(request):
             "contactBilling": {
                 "addressMailing": {
                     "address1": address1,
-                    "address2":address2,
+                    "address2": address2,
                     "city": city,
                     "country": country,
                     "postalCode": postal_code,
@@ -261,6 +270,8 @@ def purchase_domain(request):
                 "phone": phone,
                 "nameFirst": first_name,
                 "nameLast": last_name,
+                # "entityType": "INDIVIDUAL",  # Add entityType here
+                # "language": "en", 
             },
             "contactTech": {
                 "addressMailing": {
@@ -286,17 +297,37 @@ def purchase_domain(request):
                 "ns02.domaincontrol.com",
             ],
             "period": period,
-            "privacy": False,
+            # "privacy": False,
             "renewAuto": True,
         }
 
         # Send request to GoDaddy API
         response = requests.post(url, headers=headers, json=payload)
-        
+
         response_data = response.json()
         response_data["status"] = "SUCCESS" if response.status_code == 200 else "FAILED"
         print(response_data)
         if response.status_code == 200:
+
+            # Save purchase details in the database
+            purchase = Purchase.objects.create(
+                order_id=response_data.get("orderId"),  # Generate a unique order ID
+                checkout_session=checkout_session,
+                first_name=data["first_name"],
+                last_name=data["last_name"],
+                phone=data["phone"],
+                address1=data["address1"],
+                address2=data.get("address2", ""),
+                city=data["city"],
+                state=data["state"],
+                postal_code=data["postal_code"],
+                country=data["country"],
+                amount=Decimal(data["amount"]),
+                currency=data.get("currency", "USD").upper(),
+                status="SUCCESS",
+            )
+            print("Purchase details saved: =======================  ")
+            print(purchase)
             return JsonResponse(
                 {
                     "domain_name": domain_name,
@@ -304,7 +335,7 @@ def purchase_domain(request):
                     "order_id": response_data.get("orderId"),
                     "currency": response_data.get("currency"),
                     "total": response_data.get("total"),
-                    "item_count": response_data.get("itemCount")
+                    "item_count": response_data.get("itemCount"),
                 },
                 status=200,
             )
@@ -320,40 +351,44 @@ def purchase_domain(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+
 @csrf_exempt
 def create_checkout_session(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         try:
             # Get the product details from the POST request
             data = json.loads(request.body.decode("utf-8"))
-            domain_name = data.get('name')
+            domain_name = data.get("name")
 
-            product_price = Decimal(data.get('price')) * 100  # Convert to cents for Stripe
-            product_period = data.get('period')
-            user_email = data.get('email')
+            product_price = (
+                Decimal(data.get("price")) * 100
+            )  # Convert to cents for Stripe
+            product_period = data.get("period")
+            user_email = data.get("email")
 
             print("=====================================")
             print(domain_name, product_price, product_period, user_email)
+
             # Create a Stripe checkout session
             checkout_session = stripe.checkout.Session.create(
                 line_items=[
                     {
-                        'price_data': {
-                            'currency': 'usd',
-                            'unit_amount': int(product_price),  # Stripe requires the price in cents
-                            'product_data': {
-                                'name': domain_name,
-                                'description': f"Registration for {product_period} year(s)",
+                        "price_data": {
+                            "currency": "usd",
+                            "unit_amount": int(
+                                product_price
+                            ),  # Stripe requires the price in cents
+                            "product_data": {
+                                "name": domain_name,
+                                "description": f"Registration for {product_period} year(s)",
                                 # 'images': ['https://images.unsplash.com/photo-1579202673506-ca3ce28943ef'],
                             },
                         },
-                        'quantity': 1,
+                        "quantity": 1,
                     },
                 ],
-
-                mode='payment',
-
-                billing_address_collection='required',
+                mode="payment",
+                billing_address_collection="required",
                 # success_url=DOMAIN + '/success?session_id={CHECKOUT_SESSION_ID}',
                 success_url=(
                     f"{DOMAIN}/success?"
@@ -361,15 +396,29 @@ def create_checkout_session(request):
                     f"&domain_name={domain_name}"
                     f"&period={product_period}"
                 ),
-                cancel_url=DOMAIN + '/cancel',
+                cancel_url=DOMAIN + "/cancel",
                 customer_email=user_email,
-
             )
-            return JsonResponse({'session': checkout_session.url},status=200)
+            # Save checkout session details in the database
+            checkoutdb_session = CheckoutSession.objects.create(
+                session_id=checkout_session.id,
+                domain_name=domain_name,
+                email=user_email,
+                period=product_period,
+                price=product_price,
+                currency="usd",
+            )
+
+            print(f"Session ID: {checkout_session.id}")
+            print(f"Checkout URL: {checkoutdb_session}")
+            return JsonResponse({"session": checkout_session.url}, status=200)
         except Exception as error:
             return JsonResponse({"error": str(error)}, status=500)
 
-    return JsonResponse({"error": "Invalid request method, POST only Allowed!"}, status=405)
+    return JsonResponse(
+        {"error": "Invalid request method, POST only Allowed!"}, status=405
+    )
+
 
 @csrf_exempt
 def success(request):
@@ -389,18 +438,67 @@ def cancel(request):
     return HttpResponse("Payment Cancelled")
 
 
+def export_to_csv(request):
+    purchases = Purchase.objects.all()
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="purchases.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(
+        [
+            "Order ID",
+            "Domain Name",
+            "First Name",
+            "Last Name",
+            "Email",
+            "Phone",
+            "Address",
+            "City",
+            "State",
+            "Postal Code",
+            "Country",
+            "Amount",
+            "Currency",
+            "Status",
+            "Created At",
+        ]
+    )
+
+    for purchase in purchases:
+        writer.writerow(
+            [
+                purchase.order_id,
+                purchase.checkout_session.domain_name,
+                purchase.first_name,
+                purchase.last_name,
+                purchase.checkout_session.email,
+                purchase.phone,
+                purchase.address1,
+                purchase.city,
+                purchase.state,
+                purchase.postal_code,
+                purchase.country,
+                purchase.amount,
+                purchase.currency,
+                purchase.status,
+                purchase.created_at,
+            ]
+        )
+
+    return response
+
 
 # @csrf_exempt
 # def create_checkout_session(request):
 #     if request.method != "POST":
 #         return JsonResponse({"error": "Invalid request method, POST Method Allowed!"}, status=400)
-#     try: 
+#     try:
 #         data = json.loads(request.body.decode("utf-8"))
 #         domain_name = data.get("domain_name")
 #         email = data.get("email")
 #         period = data.get("period")
 #         amount = Decimal(data.get("price"))
-        
+
 #         checkout_session = stripe.checkout.Session.create(
 #             line_items=[
 #                 {
