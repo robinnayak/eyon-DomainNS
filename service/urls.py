@@ -9,4 +9,5 @@ urlpatterns = [
     path('success/', views.success, name='success' ), # Added the service app url
     path('cancel/', views.cancel, name='cancel' ), # Added the service app url
     path('stripe-webhook/',views.stripe_webhook, name='stripe-webhook'),
+    path('checkout-session/',views.create_checkout_session, name='checkout-session'),
 ]

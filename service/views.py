@@ -101,21 +101,6 @@ def domain_agreement(tlds, privacy="false"):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-@csrf_exempt
-def success(request):
-    session_id = request.GET.get("session_id")
-    print(session_id)
-    try:
-        session = stripe.checkout.Session.retrieve(session_id)
-        print(session)
-        return JsonResponse({"message": "Payment successful", "session": session})
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-
-
-def cancel(request):
-    return HttpResponse("Payment Cancelled")
-
 
 @csrf_exempt
 def stripe_webhook(request):
@@ -201,15 +186,7 @@ def purchase_domain(request):
 
         if amount <= 0:
             return JsonResponse({"error": "Amount must be greater than 0"}, status=400)
-
-        # Create Stripe checkout session
-        checkout_url = create_checkout_session(domain_name, amount, period, email)
-
-        if not checkout_url:
-            return JsonResponse(
-                {"error": "Failed to create Stripe checkout session"}, status=500
-            )
-
+        
         # Extract TLD and fetch agreement keys
         tlds = [domain_name.split(".")[-1]]  # Extract TLD from domain name
         agreements = domain_agreement(tlds)
@@ -315,8 +292,10 @@ def purchase_domain(request):
 
         # Send request to GoDaddy API
         response = requests.post(url, headers=headers, json=payload)
+        
         response_data = response.json()
-
+        response_data["status"] = "SUCCESS" if response.status_code == 200 else "FAILED"
+        print(response_data)
         if response.status_code == 200:
             return JsonResponse(
                 {
@@ -325,8 +304,7 @@ def purchase_domain(request):
                     "order_id": response_data.get("orderId"),
                     "currency": response_data.get("currency"),
                     "total": response_data.get("total"),
-                    "item_count": response_data.get("itemCount"),
-                    "checkout_url": checkout_url,
+                    "item_count": response_data.get("itemCount")
                 },
                 status=200,
             )
@@ -342,35 +320,112 @@ def purchase_domain(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+@csrf_exempt
+def create_checkout_session(request):
+    if request.method == 'POST':
+        try:
+            # Get the product details from the POST request
+            data = json.loads(request.body.decode("utf-8"))
+            domain_name = data.get('name')
 
-def create_checkout_session(domain_name, amount, period, email):
-    
-    try:
-        checkout_session = stripe.checkout.Session.create(
-            line_items=[
-                {
-                    "price_data": {
-                        "currency": "usd",
-                        "unit_amount": amount
-                        * 100,  # Stripe requires the price in cents
-                        "product_data": {
-                            "name": domain_name,
-                            "description": f"Registration for {period} year(s)",
+            product_price = Decimal(data.get('price')) * 100  # Convert to cents for Stripe
+            product_period = data.get('period')
+            user_email = data.get('email')
+
+            print("=====================================")
+            print(domain_name, product_price, product_period, user_email)
+            # Create a Stripe checkout session
+            checkout_session = stripe.checkout.Session.create(
+                line_items=[
+                    {
+                        'price_data': {
+                            'currency': 'usd',
+                            'unit_amount': int(product_price),  # Stripe requires the price in cents
+                            'product_data': {
+                                'name': domain_name,
+                                'description': f"Registration for {product_period} year(s)",
+                                # 'images': ['https://images.unsplash.com/photo-1579202673506-ca3ce28943ef'],
+                            },
                         },
+                        'quantity': 1,
                     },
-                    "quantity": 1,
-                },
-            ],
-            mode="payment",
-            billing_address_collection="required",
-            success_url=f"{DOMAIN}/success?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{DOMAIN}/cancel",
-            customer_email=email,
-        )
-        return checkout_session.url
+                ],
+
+                mode='payment',
+
+                billing_address_collection='required',
+                # success_url=DOMAIN + '/success?session_id={CHECKOUT_SESSION_ID}',
+                success_url=(
+                    f"{DOMAIN}/success?"
+                    f"session_id={{CHECKOUT_SESSION_ID}}"
+                    f"&domain_name={domain_name}"
+                    f"&period={product_period}"
+                ),
+                cancel_url=DOMAIN + '/cancel',
+                customer_email=user_email,
+
+            )
+            return JsonResponse({'session': checkout_session.url},status=200)
+        except Exception as error:
+            return JsonResponse({"error": str(error)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method, POST only Allowed!"}, status=405)
+
+@csrf_exempt
+def success(request):
+    # session_id = request.GET.get("session_id")
+    # print(session_id)
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+        session_id = data.get("session_id")
+        session = stripe.checkout.Session.retrieve(session_id)
+        print(session)
+        return JsonResponse({"message": "Payment successful", "session": session})
     except Exception as e:
-        print(f"Error creating checkout session: {e}")
-        return None
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+def cancel(request):
+    return HttpResponse("Payment Cancelled")
+
+
+
+# @csrf_exempt
+# def create_checkout_session(request):
+#     if request.method != "POST":
+#         return JsonResponse({"error": "Invalid request method, POST Method Allowed!"}, status=400)
+#     try: 
+#         data = json.loads(request.body.decode("utf-8"))
+#         domain_name = data.get("domain_name")
+#         email = data.get("email")
+#         period = data.get("period")
+#         amount = Decimal(data.get("price"))
+        
+#         checkout_session = stripe.checkout.Session.create(
+#             line_items=[
+#                 {
+#                     "price_data": {
+#                         "currency": "usd",
+#                         "unit_amount": amount * 100,  # Stripe requires the price in cents
+#                         "product_data": {
+#                             "name": domain_name,
+#                             "description": f"Registration for {period} year(s)",
+#                         },
+#                     },
+#                     "quantity": 1,
+#                 },
+#             ],
+#             mode="payment",
+#             billing_address_collection="required",
+#             success_url=f"{DOMAIN}/success?session_id={{CHECKOUT_SESSION_ID}}",
+#             cancel_url=f"{DOMAIN}/cancel",
+#             customer_email=email,
+#         )
+#         return JsonResponse({"checkout_url": checkout_session.url}, status=200)
+#         # return checkout_session.url
+#     except Exception as e:
+#         print(f"Error creating checkout session: {e}")
+#         return JsonResponse({"error": str(e)}, status=500)
 
 
 @csrf_exempt
