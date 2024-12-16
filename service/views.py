@@ -1,4 +1,4 @@
-from django.shortcuts import render, HttpResponse
+from django.shortcuts import render, HttpResponse, get_object_or_404
 from django.conf import settings
 from django.http import JsonResponse
 import requests
@@ -13,6 +13,7 @@ from decimal import Decimal
 from django.shortcuts import redirect
 from .models import CheckoutSession, Purchase
 import csv
+from .serializers import CheckoutSessionSerializer,PurchaseSerializer
 
 # Create your views here.
 
@@ -438,92 +439,57 @@ def cancel(request):
     return HttpResponse("Payment Cancelled")
 
 
+
+class CheckoutSessionView(APIView):
+    def get(self, request):
+        try:
+            checkout_sessions = CheckoutSession.objects.all()
+            serializer = CheckoutSessionSerializer(checkout_sessions, many=True)
+            return Response({"checkout_sessions": serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class PurchaseAPIView(APIView):
+    def get(self, request, session_id):
+        checkout_session = get_object_or_404(CheckoutSession, session_id=session_id)
+        purchases = Purchase.objects.filter(checkout_session=checkout_session)
+        serializer = PurchaseSerializer(purchases, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, session_id):
+        checkout_session = get_object_or_404(CheckoutSession, session_id=session_id)
+
+        data = request.data.copy()
+        data['checkout_session'] = checkout_session.id
+
+        serializer = PurchaseSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
 def export_to_csv(request):
-    purchases = Purchase.objects.all()
-    response = HttpResponse(content_type="text/csv")
-    response["Content-Disposition"] = 'attachment; filename="purchases.csv"'
-
+    file_path = 'domainserviceprovider\CSVdata\purchases.csv'
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="purchases.csv"'
+    
     writer = csv.writer(response)
-    writer.writerow(
-        [
-            "Order ID",
-            "Domain Name",
-            "First Name",
-            "Last Name",
-            "Email",
-            "Phone",
-            "Address",
-            "City",
-            "State",
-            "Postal Code",
-            "Country",
-            "Amount",
-            "Currency",
-            "Status",
-            "Created At",
-        ]
-    )
-
-    for purchase in purchases:
-        writer.writerow(
-            [
-                purchase.order_id,
-                purchase.checkout_session.domain_name,
-                purchase.first_name,
-                purchase.last_name,
-                purchase.checkout_session.email,
-                purchase.phone,
-                purchase.address1,
-                purchase.city,
-                purchase.state,
-                purchase.postal_code,
-                purchase.country,
-                purchase.amount,
-                purchase.currency,
-                purchase.status,
-                purchase.created_at,
-            ]
-        )
-
+    
+    writer.writerow(['session id','Domain Name','Email','Period','Price','Currency','Created At'])
+    sessions = CheckoutSession.objects.all()
+    
+    for session in sessions:
+        writer.writerow([
+            session.session_id,
+            session.domain_name,
+            session.email,
+            session.period,
+            session.price,
+            session.currency,
+            session.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        ])
     return response
-
-
-# @csrf_exempt
-# def create_checkout_session(request):
-#     if request.method != "POST":
-#         return JsonResponse({"error": "Invalid request method, POST Method Allowed!"}, status=400)
-#     try:
-#         data = json.loads(request.body.decode("utf-8"))
-#         domain_name = data.get("domain_name")
-#         email = data.get("email")
-#         period = data.get("period")
-#         amount = Decimal(data.get("price"))
-
-#         checkout_session = stripe.checkout.Session.create(
-#             line_items=[
-#                 {
-#                     "price_data": {
-#                         "currency": "usd",
-#                         "unit_amount": amount * 100,  # Stripe requires the price in cents
-#                         "product_data": {
-#                             "name": domain_name,
-#                             "description": f"Registration for {period} year(s)",
-#                         },
-#                     },
-#                     "quantity": 1,
-#                 },
-#             ],
-#             mode="payment",
-#             billing_address_collection="required",
-#             success_url=f"{DOMAIN}/success?session_id={{CHECKOUT_SESSION_ID}}",
-#             cancel_url=f"{DOMAIN}/cancel",
-#             customer_email=email,
-#         )
-#         return JsonResponse({"checkout_url": checkout_session.url}, status=200)
-#         # return checkout_session.url
-#     except Exception as e:
-#         print(f"Error creating checkout session: {e}")
-#         return JsonResponse({"error": str(e)}, status=500)
 
 
 @csrf_exempt

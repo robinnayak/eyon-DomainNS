@@ -1,0 +1,229 @@
+{
+	"info": {
+		"_postman_id": "7a04f0a6-06dc-4678-9651-bdc3b2bbe9da",
+		"name": "GoDaddyServiceProvider",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "21725977"
+	},
+	"item": [
+		{
+			"name": "http://localhost:8000/checkout-session/",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\":\"roomrrentaler.com\",\r\n    \"price\": \"10.23\",\r\n    \"period\":\"1\",\r\n    \"email\": \"robinnayak86@gmail.com\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8000/checkout-session/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"checkout-session",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:8000/purchase-domain/",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"domain_name\": \"roomrrentaler.com\",\r\n    \"email\": \"robinnayak86@gmail.com\",\r\n    \"period\": 1,\r\n    \"first_name\": \"John\",\r\n    \"last_name\": \"Doe\",\r\n    \"phone\": \"+1.5555555555\",\r\n    \"address1\": \"123 Example Street\",\r\n    \"address2\": \"Apt 4B\",\r\n    \"city\": \"Example City\",\r\n    \"state\": \"CA\",\r\n    \"postal_code\": \"90001\",\r\n    \"country\": \"US\",\r\n    \"amount\": 10,\r\n    \"currency\": \"USD\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8000/purchase-domain/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"purchase-domain",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:8000/domain-agreement/",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/domain-agreement/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"domain-agreement",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:8000/list-domains/",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "sso-key DW2tXCz1ZniZCiBdyQpzML:sk_test_51QVZwfHBw5TvWcTI9xo2bOH63pRx0n5k13OXvI7CwNnApAEm8S6Gk06YjgOmjZ9VjigII05VqjWw2SXOx2PE8TjX00MdDkbcJT",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"domain_name\" : \"roomsavehunter\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8000/list-domains/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"list-domains",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:8000/payment/",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"card_number\": \"4242424242424242\",\r\n    \"expiry_month\": \"12\",\r\n    \"expiry_year\": \"2025\",\r\n    \"cvc\": \"123\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8000/payment/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"payment",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:8000/stripe-webhook/",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\":\"test product\",\r\n    \"price\": \"10000\",\r\n    \"description\":\"test product\",\r\n    \"email\": \"robinnayak86@gmail.com\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8000/stripe-webhook/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"stripe-webhook",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:8000/purchase-customer-details/cs_test_a1Bxx5nzhocx5civmRXbnnKrBDzhAWcrLQTRWizqqSYlYZs0Xj3GY4Kxhq",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/purchase-customer-details/cs_test_a1Bxx5nzhocx5civmRXbnnKrBDzhAWcrLQTRWizqqSYlYZs0Xj3GY4Kxhq",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"purchase-customer-details",
+						"cs_test_a1Bxx5nzhocx5civmRXbnnKrBDzhAWcrLQTRWizqqSYlYZs0Xj3GY4Kxhq"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:8000/checkout-session-details/",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/checkout-session-details/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"checkout-session-details",
+						""
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

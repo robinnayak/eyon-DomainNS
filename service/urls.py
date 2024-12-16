@@ -10,4 +10,8 @@ urlpatterns = [
     path('cancel/', views.cancel, name='cancel' ), # Added the service app url
     path('stripe-webhook/',views.stripe_webhook, name='stripe-webhook'),
     path('checkout-session/',views.create_checkout_session, name='checkout-session'),
+    path('checkout-session-details/',views.CheckoutSessionView.as_view(), name='checkout-session-details'),
+    path('purchase-customer-details/<str:session_id>',views.PurchaseAPIView.as_view(), name='purchase-customer-details'),
+    path('export-checkout-sessions/', views.export_to_csv, name='export-checkout-sessions'),
+
 ]
