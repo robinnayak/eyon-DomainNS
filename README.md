@@ -25,20 +25,25 @@ This project is a full-stack web application that allows users to search, purcha
 
 **Home Check Available Domain:**
 
-![Home Domain Available Screenshot](domainserviceprovider\screenshot\home_1.png)
-![Home Domain Available Screenshot](domainserviceprovider\screenshot\home_available_1.png)
+![Home Domain Available Screenshot](./screenshot/home_1.png)
+![Home Domain Available Screenshot](./screenshot/home_available_1.png)
 
 **Checkout By Stripe Payment:**
-![Checkout Session Screenshot](domainserviceprovider\screenshot\checkout_1.png)
 
+![Checkout Session Screenshot](./screenshot/checkout_1.png)
 
 **Purchase Domain:**
 
-![Purchase Domain Screenshot](domainserviceprovider\screenshot\payment_succesfull_1.png)
+![Purchase Domain Screenshot](./screenshot/payment_succesfull_1.png)
 
 **CSV Format:**
 
-![Domain Agreement Screenshot](domainserviceprovider\screenshot\csv_1.png)
+![Domain Agreement Screenshot](./screenshot/csv_1.png)
+
+**Django DataBase :**
+
+![Domain Agreement Screenshot](./screenshot/django_db_1.png)
+![Domain Agreement Screenshot](./screenshot/django_db_2.png)
 
 ## Backend Setup
 
